@@ -1,20 +1,33 @@
-import { View, Text, FlatList, Image } from 'react-native'
-import React from 'react'
+import { View, Text, FlatList, Image, RefreshControl } from 'react-native'
+import React, { useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { images } from '@/constants'
 import SearchInput from '@/components/SearchInput'
 import Trending from '@/components/Trending'
 import EmtyState from '@/components/EmtyState'
+import { getAllPosts, getLatestPosts } from '@/lib/appwrite'
+import useAppwrite from '@/lib/useAppwrite'
+import VideoCard from '@/components/VideoCard'
 
 const Home = () => {
+	const { data: posts, refetch } = useAppwrite(getAllPosts)
+	const { data: latestPosts } = useAppwrite(getLatestPosts)
+
+	const [refreshing, setRefreshing] = useState(false)
+
+	const onRefresh = async () => {
+		setRefreshing(true)
+		await refetch()
+		setRefreshing(false)
+	}
+
 	return (
 		<SafeAreaView className='bg-primary h-full'>
 			<FlatList
-				// data={[{ id: 1 }, { id: 2 }, { id: 3 }]}
-				data={[]}
-				keyExtractor={(item) => item.$id}
+				data={posts}
+				keyExtractor={(item: { $id: string, title: string, thumbnail: string, video: string, creator: { username: string, avatar: string } }) => item.$id}
 				renderItem={({ item }) => (
-					<Text className='text-3xl text-white'>{item.id}</Text>
+					<VideoCard video={item} key={item.$id} />
 				)}
 				ListHeaderComponent={() => (
 					<View className='my-6 px-4 space-y-6'>
@@ -45,7 +58,7 @@ const Home = () => {
 							<Text className="text-lg text-gray-100 font-pregular mb3">
 								Latest Videos
 							</Text>
-							<Trending posts={[{id:1}, {id:2}, {id:3}] ?? []} />
+							<Trending posts={latestPosts} />
 						</View>
 					</View>
 				)}
@@ -55,6 +68,12 @@ const Home = () => {
 						subtitle='Be the first one to upload a video'
 					/>
 				)}
+				refreshControl={
+					<RefreshControl
+						refreshing={refreshing}
+						onRefresh={onRefresh}
+					/>
+				}
 			/>
 		</SafeAreaView>
 	)
